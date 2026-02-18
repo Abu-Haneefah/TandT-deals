@@ -1,12 +1,18 @@
 import { useUserStore } from "@/store/userStore";
 import { Feather, Ionicons, SimpleLineIcons } from "@expo/vector-icons";
-import { Link } from "expo-router";
+import { Link, useRouter } from "expo-router";
 import React from "react";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const Profile = () => {
-  const { isLoggedIn, user, logout, login } = useUserStore();
+  const { isLoggedIn, user, logout } = useUserStore();
+
+  const router = useRouter();
+
+  const handleSingIn = () => {
+    router.navigate("/SignIn");
+  };
 
   if (!isLoggedIn) {
     return (
@@ -26,11 +32,10 @@ const Profile = () => {
             <Text className="text-white font-bold text-lg">Sign Up </Text>
           </View>
         </Link>
+
         <TouchableOpacity
           className="bg-[#a3cc39] w-full mt-4 py-4 rounded-2xl items-center shadow-lg shadow-[#a3cc39]/40"
-          onPress={() =>
-            login({ fullName: "", email: "", phone: "", country: "" })
-          }
+          onPress={handleSingIn}
         >
           <Text className="text-white font-bold text-lg"> Login</Text>
         </TouchableOpacity>

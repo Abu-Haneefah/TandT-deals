@@ -68,6 +68,7 @@ const Wishlist = () => {
       } catch (err) {
         setError(true);
         setLoading(false);
+        console.log(err);
       }
     };
     fetchData();

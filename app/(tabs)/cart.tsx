@@ -1,4 +1,5 @@
-import { Feather, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { AntDesign, Feather, MaterialCommunityIcons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -9,8 +10,9 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import Button from "../components/Button";
 
-// --- 1. Type Definitions ---
+// --- Types ---
 interface CartItem {
   id: string;
   name: string;
@@ -19,69 +21,62 @@ interface CartItem {
   discount: string;
   image: string;
   quantity: number;
-  isExpress: boolean;
+  color: string;
+  brand: string;
 }
 
 const Cart = () => {
-  // --- 2. State Management ---
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
+  const [, setError] = useState(false);
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
 
-  // Simulate Data Fetching
   useEffect(() => {
     const fetchCart = async () => {
       try {
-        await new Promise((resolve) => setTimeout(resolve, 1500));
+        await new Promise((resolve) => setTimeout(resolve, 1000));
         setCartItems([
           {
             id: "c1",
-            name: "Spark 40 Smart Phone With 128GB ROM & 4GB RAM",
-            price: 169699,
-            oldPrice: 250000,
-            discount: "-32%",
+            name: "Apple iPhone 12 Pro, 128GB, Silver - Fully Unlocked",
+            price: 400128,
+            oldPrice: 450000,
+            discount: "-11%",
             image:
-              "https://images.unsplash.com/photo-1598327105666-5b89351aff97?q=80&w=200",
+              "https://images.unsplash.com/photo-1591337676887-a217a6970a8a?q=80&w=200",
             quantity: 1,
-            isExpress: true,
+            color: "Matte Black",
+            brand: "iPhone",
           },
           {
             id: "c2",
-            name: "4 Litre Whistling Kettle - Stainless Steel High Quality",
-            price: 12999,
-            oldPrice: 15000,
-            discount: "-13%",
+            name: "Samsung Galaxy S21, 256GB, Phantom Gray - Fully Unlocked",
+            price: 350750,
+            oldPrice: 400000,
+            discount: "-12%",
             image:
-              "https://images.unsplash.com/photo-1594142340245-21d3f94218d6?q=80&w=200",
+              "https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?q=80&w=200",
             quantity: 1,
-            isExpress: false,
-          },
-          {
-            id: "c3",
-            name: "Men's Bifold Leather Wallet - Vintage Style Brown",
-            price: 2980,
-            oldPrice: 4470,
-            discount: "-33%",
-            image:
-              "https://images.unsplash.com/photo-1627123430984-7151109d21c1?q=80&w=200",
-            quantity: 2,
-            isExpress: true,
+            color: "Phantom Violet",
+            brand: "Samsung",
           },
         ]);
         setLoading(false);
-      } catch (e) {
+      } catch (err) {
         setError(true);
         setLoading(false);
+        console.log(err);
       }
     };
     fetchCart();
   }, []);
 
-  // --- 3. Calculations ---
   const subtotal = cartItems.reduce(
     (acc, item) => acc + item.price * item.quantity,
     0,
   );
+  const shipping = 4128;
+  const total = subtotal + shipping;
 
   const updateQuantity = (id: string, delta: number) => {
     setCartItems((prev) =>
@@ -97,168 +92,125 @@ const Cart = () => {
     setCartItems((prev) => prev.filter((item) => item.id !== id));
   };
 
-  // --- 4. Render Loading State ---
-  if (loading) {
+  if (loading)
     return (
       <View className="flex-1 bg-white justify-center items-center">
-        <ActivityIndicator size="large" color="#f97316" />
-        <Text className="text-gray-500 mt-4 font-medium">
-          Loading your cart...
-        </Text>
+        <ActivityIndicator size="large" color="#a3cc39" />
       </View>
     );
-  }
-
-  // --- 5. Render Error State ---
-  if (error) {
-    return (
-      <View className="flex-1 bg-white justify-center items-center px-10">
-        <Ionicons name="alert-circle-outline" size={80} color="red" />
-        <Text className="text-xl font-bold text-gray-800 mt-4 text-center">
-          Failed to load cart
-        </Text>
-        <TouchableOpacity
-          onPress={() => {
-            setLoading(true);
-            setError(false);
-          }}
-          className="bg-orange-500 mt-6 px-8 py-3 rounded-xl"
-        >
-          <Text className="text-white font-bold">Try Again</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
 
   return (
-    <SafeAreaView className="flex-1 bg-[#F1F1F1]">
-      {/* Header Summary */}
-      <View className="bg-white px-4 py-3 border-b border-gray-200">
-        <Text className="text-gray-400 text-[10px] uppercase font-bold tracking-widest mb-1">
-          Cart Summary
+    <SafeAreaView className="flex-1 bg-white">
+      <ScrollView
+        className="flex-1 px-4"
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 30 }} // Extra space at bottom
+      >
+        <Text className="text-gray-500 mt-4 mb-2 text-lg font-medium">
+          Cart
         </Text>
-        <View className="flex-row justify-between items-center">
-          <Text className="text-lg font-bold text-gray-800">Subtotal</Text>
-          <Text className="text-xl font-extrabold text-gray-900">
+
+        {/* Summary Header Section */}
+        <View className="flex-row justify-between mb-1">
+          <Text className="text-gray-600">
+            Subtotal ({cartItems.length} items)
+          </Text>
+          <Text className="font-bold text-gray-800">
             ₦{subtotal.toLocaleString()}
           </Text>
         </View>
-      </View>
 
-      <ScrollView
-        className="flex-1"
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 120 }}
-      >
-        <View className="bg-[#EAEAEA] px-4 py-2">
-          <Text className="text-gray-500 font-medium">
-            Cart ({cartItems.length})
+        <View className="flex-row justify-between mb-1">
+          <Text className="text-gray-600">Shipping</Text>
+          <Text className="font-bold text-gray-800">
+            ₦{shipping.toLocaleString()}
           </Text>
         </View>
 
+        <View className="flex-row justify-between border-b border-gray-100 pb-4">
+          <Text className="text-gray-600">Tax</Text>
+          <Text className="font-bold text-gray-300">7%VAT</Text>
+        </View>
+
+        <View className="flex-row justify-between py-4">
+          <Text className="text-xl font-bold">Total</Text>
+          <Text className="text-xl font-bold text-main">
+            ₦{total.toLocaleString()}
+          </Text>
+        </View>
+
+        <Text className="text-gray-500 mb-4 font-medium">
+          Items ({cartItems.length})
+        </Text>
+
+        {/* Cart Item List */}
         {cartItems.map((item) => (
           <View
             key={item.id}
-            className="bg-white mb-2 p-4 border-b border-gray-100"
+            className="flex-row mb-6 border-b border-gray-50 pb-6"
           >
-            <View className="flex-row">
-              <Image
-                source={{ uri: item.image }}
-                className="w-20 h-20 rounded"
-                resizeMode="contain"
-              />
-              <View className="flex-1 ml-4">
-                <Text
-                  className="text-sm text-gray-800 leading-5"
-                  numberOfLines={2}
-                >
-                  {item.name}
-                </Text>
-                <View className="flex-row items-center mt-1">
-                  <Text className="text-lg font-bold">
-                    ₦{item.price.toLocaleString()}
-                  </Text>
-                </View>
-                <View className="flex-row items-center">
-                  <Text className="text-gray-400 text-xs line-through">
-                    ₦{item.oldPrice.toLocaleString()}
-                  </Text>
-                  <View className="bg-orange-50 px-1 rounded ml-2">
-                    <Text className="text-main text-[10px] font-bold">
-                      {item.discount}
-                    </Text>
-                  </View>
-                </View>
-                <Text className="text-green-600 text-[10px] font-bold mt-1">
-                  In Stock
-                </Text>
-
-                {item.isExpress && (
-                  <View className="flex-row items-center mt-1">
-                    <Text className="text-[#0a1128] font-black italic text-[10px]">
-                      TANDT
-                    </Text>
-                    <Text className="text-orange-500 font-bold italic text-[10px] ml-1">
-                      EXPRESS
-                    </Text>
-                  </View>
-                )}
-              </View>
-            </View>
-
-            <View className="flex-row justify-between items-center mt-4">
-              <TouchableOpacity
-                onPress={() => removeItem(item.id)}
-                className="flex-row items-center"
+            <Image
+              source={{ uri: item.image }}
+              className="w-24 h-24 rounded-lg bg-gray-50"
+              resizeMode="contain"
+            />
+            <View className="flex-1 ml-4">
+              <Text
+                className="font-medium text-gray-800 text-sm"
+                numberOfLines={2}
               >
-                <MaterialCommunityIcons
-                  name="trash-can-outline"
-                  size={20}
-                  color="red"
-                />
-                <Text className="ml-1 text-main font-bold text-sm uppercase">
-                  Remove
-                </Text>
-              </TouchableOpacity>
+                {item.name}
+              </Text>
+              <Text className="font-bold text-lg mt-1 text-gray-900">
+                ₦{item.price.toLocaleString()}
+              </Text>
+              <Text className="text-gray-400 text-xs mt-1">
+                Color: {item.color} | Brand: {item.brand}
+              </Text>
 
-              <View className="flex-row items-center bg-white rounded-lg">
+              <View className="flex-row items-center justify-between mt-3">
+                <View className="flex-row items-center bg-[#f5f5f5] rounded-lg">
+                  <TouchableOpacity
+                    onPress={() => updateQuantity(item.id, -1)}
+                    className="p-2 bg-main rounded-l-lg"
+                  >
+                    <Feather name="minus" size={16} color="black" />
+                  </TouchableOpacity>
+                  <Text className="px-4 font-bold text-base">
+                    {item.quantity}
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => updateQuantity(item.id, 1)}
+                    className="p-2 bg-main rounded-r-lg"
+                  >
+                    <Feather name="plus" size={16} color="black" />
+                  </TouchableOpacity>
+                </View>
+
                 <TouchableOpacity
-                  onPress={() => updateQuantity(item.id, -1)}
-                  className="bg-orange-100 p-1.5 rounded-lg"
+                  onPress={() => removeItem(item.id)}
+                  className="p-2"
                 >
-                  <Feather name="minus" size={18} color="#f97316" />
-                </TouchableOpacity>
-                <Text className="mx-4 font-bold text-lg">{item.quantity}</Text>
-                <TouchableOpacity
-                  onPress={() => updateQuantity(item.id, 1)}
-                  className="bg-main p-1.5 rounded-lg"
-                >
-                  <Feather name="plus" size={18} color="white" />
+                  <MaterialCommunityIcons
+                    name="trash-can-outline"
+                    size={22}
+                    color="#9ca3af"
+                  />
                 </TouchableOpacity>
               </View>
             </View>
           </View>
         ))}
 
-        <TouchableOpacity className="bg-white mx-4 mt-2 p-4 rounded-lg flex-row justify-between items-center border border-gray-200">
-          <Text className="text-gray-800 font-medium">
-            Complete your purchase
-          </Text>
-          <Feather name="chevron-down" size={20} color="black" />
-        </TouchableOpacity>
+        {/* Proceed Button  */}
+        <View className="mt-4">
+          <Button
+            title="Proceed to Checkout"
+            onPress={() => router.push("/checkout")}
+            icon={<AntDesign name="arrow-right" size={18} color="black" />}
+          />
+        </View>
       </ScrollView>
-
-      {/* Fixed Bottom Checkout Bar */}
-      <View className="absolute bottom-0 w-full bg-white p-4 border-t border-gray-200 flex-row items-center shadow-lg">
-        <TouchableOpacity className="border border-orange-500 p-3 rounded-lg mr-4">
-          <Ionicons name="call-outline" size={24} color="#f97316" />
-        </TouchableOpacity>
-        <TouchableOpacity className="flex-1 bg-orange-500 py-4 rounded-lg items-center shadow-sm">
-          <Text className="text-white font-extrabold text-base">
-            CHECKOUT (₦{subtotal.toLocaleString()})
-          </Text>
-        </TouchableOpacity>
-      </View>
     </SafeAreaView>
   );
 };
