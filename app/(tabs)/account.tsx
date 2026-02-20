@@ -107,7 +107,7 @@ const Profile = () => {
           {/* Logout Button */}
           <TouchableOpacity
             onPress={logout}
-            className="mt-8 mb-8 flex-row items-center justify-center py-4 rounded-2xl border border-red-100 bg-red-50"
+            className="mt-8 mb-11 flex-row items-center justify-center py-4 rounded-2xl border border-red-100 bg-red-50"
           >
             <SimpleLineIcons name="logout" size={16} color="#ef4444" />
             <Text className="ml-2 text-red-500 font-bold">

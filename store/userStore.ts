@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as SecureStore from "expo-secure-store";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
@@ -19,10 +20,20 @@ interface UserState {
 export const useUserStore = create<UserState>()(
   persist(
     (set) => ({
-      isLoggedIn: true,
+      isLoggedIn: false,
       user: null,
-      login: (userData) => set({ isLoggedIn: true, user: userData }),
-      logout: () => set({ isLoggedIn: false, user: null }),
+
+      login: (userData) => {
+        set({ isLoggedIn: true, user: userData });
+      },
+
+      logout: () => {
+        SecureStore.deleteItemAsync("userToken").catch((err) =>
+          console.error("Failed to delete token on logout", err),
+        );
+
+        set({ isLoggedIn: false, user: null });
+      },
     }),
     {
       name: "user-storage",
