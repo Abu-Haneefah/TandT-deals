@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import "./global.css";
 
+// Keep the native splash screen visible until we tell it to hide
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
 const { width, height } = Dimensions.get("screen");
@@ -19,14 +20,16 @@ export default function RootLayout() {
   const [showAnimation, setShowAnimation] = useState(true);
 
   const logoOpacity = useRef(new Animated.Value(0)).current;
-  const logoScale = useRef(new Animated.Value(0.7)).current; // Start smaller for more travel
+  const logoScale = useRef(new Animated.Value(0.7)).current;
   const overlayOpacity = useRef(new Animated.Value(1)).current;
 
+  // Phase 1: Preparation
   useEffect(() => {
     async function prepare() {
       try {
-        // Increase the initial wait time to ensure the app is fully loaded behind the scenes
-        await new Promise((resolve) => setTimeout(resolve, 2000));
+        // Reduced to 1000ms. Over a tunnel, 2000ms + animations
+        // feels like the app is broken.
+        await new Promise((resolve) => setTimeout(resolve, 1000));
       } catch (e) {
         console.warn(e);
       } finally {
@@ -36,10 +39,18 @@ export default function RootLayout() {
     prepare();
   }, []);
 
+  // Phase 2: Animation Sequence
   useEffect(() => {
     if (appIsReady) {
+      /**
+       * CRITICAL FIX: Hide the native splash screen NOW.
+       * This reveals the 'overlay' View below so the user sees
+       * your animation starting.
+       */
+      SplashScreen.hideAsync().catch(() => {});
+
       Animated.sequence([
-        // Phase 1: Smooth, slower fade in (800ms)
+        // Phase 1: Fade and Spring In
         Animated.parallel([
           Animated.timing(logoOpacity, {
             toValue: 1,
@@ -48,37 +59,35 @@ export default function RootLayout() {
           }),
           Animated.spring(logoScale, {
             toValue: 1,
-            friction: 6, // More "bounciness"
+            friction: 6,
             tension: 40,
             useNativeDriver: true,
           }),
         ]),
 
-        // Phase 2: "The Breath" - Logo grows very slightly while waiting
-        // This makes the wait feel intentional and high-end
+        // Phase 2: "The Breath"
         Animated.timing(logoScale, {
           toValue: 1.05,
           duration: 1200,
           useNativeDriver: true,
         }),
 
-        // Phase 3: Sophisticated exit
-        // We fade the overlay and zoom the logo out simultaneously
+        // Phase 3: Sophisticated exit (Zoom and Fade)
         Animated.parallel([
           Animated.timing(overlayOpacity, {
             toValue: 0,
-            duration: 800, // Slower fade out
+            duration: 800,
             useNativeDriver: true,
           }),
           Animated.timing(logoScale, {
-            toValue: 2.5, // Zooming "into" the screen
+            toValue: 2.5,
             duration: 850,
             useNativeDriver: true,
           }),
         ]),
       ]).start(() => {
+        // Remove the overlay from the DOM entirely so users can interact with the app
         setShowAnimation(false);
-        SplashScreen.hideAsync();
       });
     }
   }, [appIsReady, logoOpacity, logoScale, overlayOpacity]);
@@ -87,10 +96,12 @@ export default function RootLayout() {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#0e1525" />
 
+      {/* The actual app mounts here behind the animation */}
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       </Stack>
 
+      {/* Custom Animated Splash Overlay */}
       {showAnimation && (
         <Animated.View
           pointerEvents="none"

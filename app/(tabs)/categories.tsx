@@ -1,7 +1,7 @@
 import { useCategoryStore } from "@/store/useCategoryStore";
 import { useProductStore } from "@/store/useProductStore";
 import { Feather } from "@expo/vector-icons";
-import { useLocalSearchParams, useRouter } from "expo-router"; // Added useLocalSearchParams
+import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -24,7 +24,7 @@ interface LocalCategory {
 
 const Categories = () => {
   const router = useRouter();
-  const { initialCategoryId } = useLocalSearchParams(); // Catch the ID from Home
+  const { initialCategoryId } = useLocalSearchParams();
   const { width } = useWindowDimensions();
   const sidebarWidth = width * 0.28;
 
@@ -51,7 +51,6 @@ const Categories = () => {
     fetchAllCategories();
   }, []);
 
-  // Update selection when categories load OR when user clicks on a new category from Home
   useEffect(() => {
     const mainCats = categories.filter((c) => !c.parentId);
     if (mainCats.length > 0) {
@@ -94,7 +93,7 @@ const Categories = () => {
   const currentProducts = getProducts();
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    <SafeAreaView className="flex-1 bg-white" edges={["top"]}>
       <View className="flex-row items-center px-4 py-3 border-b border-gray-100">
         <TouchableOpacity className="mr-4" onPress={() => router.back()}>
           <Feather name="arrow-left" size={24} color="#0a1128" />
@@ -125,11 +124,7 @@ const Categories = () => {
                   }`}
                 >
                   <Text
-                    className={`text-[11px] font-bold capitalize ${
-                      selectedMainId === cat.id
-                        ? "text-[#a3cc39]"
-                        : "text-gray-500"
-                    }`}
+                    className={`text-[11px] font-bold capitalize ${selectedMainId === cat.id ? "text-[#a3cc39]" : "text-gray-500"}`}
                   >
                     {cat.title}
                   </Text>
@@ -154,18 +149,10 @@ const Categories = () => {
                     setSelectedSubSlug(sub.slug);
                     fetchProductsBySubCategory({ subCategory: sub.slug });
                   }}
-                  className={`justify-center px-4 mr-2 ${
-                    selectedSubSlug === sub.slug
-                      ? "border-b-2 border-[#a3cc39]"
-                      : ""
-                  }`}
+                  className={`justify-center px-4 mr-2 ${selectedSubSlug === sub.slug ? "border-b-2 border-[#a3cc39]" : ""}`}
                 >
                   <Text
-                    className={`text-[11px] font-bold ${
-                      selectedSubSlug === sub.slug
-                        ? "text-[#a3cc39]"
-                        : "text-gray-400"
-                    }`}
+                    className={`text-[11px] font-bold ${selectedSubSlug === sub.slug ? "text-[#a3cc39]" : "text-gray-400"}`}
                   >
                     {sub.title}
                   </Text>
@@ -183,41 +170,45 @@ const Categories = () => {
             ) : (
               <View className="flex-row flex-wrap justify-between">
                 {currentProducts.length > 0 ? (
-                  currentProducts.map((product: any) => (
-                    <TouchableOpacity
-                      key={product.id}
-                      onPress={() =>
-                        router.push(`/store/product/${product.slug}`)
-                      }
-                      className="w-[48%] bg-white mb-4 rounded-xl border border-gray-100 shadow-sm overflow-hidden"
-                    >
-                      <Image
-                        source={{
-                          uri:
-                            product.images?.[0] ||
-                            "https://via.placeholder.com/150",
-                        }}
-                        className="w-full h-32 bg-gray-50"
-                        resizeMode="cover"
-                      />
-                      <View className="p-2">
-                        <Text
-                          className="text-[11px] font-medium text-gray-800"
-                          numberOfLines={1}
-                        >
-                          {product.title}
-                        </Text>
-                        <Text className="text-sm font-bold text-[#0a1128] mt-1">
-                          ₦
-                          {(
-                            product.price ||
-                            product.vendorProducts?.[0]?.price ||
-                            0
-                          ).toLocaleString()}
-                        </Text>
-                      </View>
-                    </TouchableOpacity>
-                  ))
+                  currentProducts.map((product: any) => {
+                    // EXACT SAME PRICE LOGIC AS PRODUCTCARD
+                    const displayPrice =
+                      product.salePrice || product.price || 0;
+
+                    return (
+                      <TouchableOpacity
+                        key={product.id || product._id}
+                        onPress={() =>
+                          router.push({
+                            pathname: "/[products]",
+                            params: { products: product.slug },
+                          })
+                        }
+                        className="w-[48%] bg-white mb-4 rounded-xl border border-gray-100 shadow-sm overflow-hidden"
+                      >
+                        <Image
+                          source={{
+                            uri:
+                              product.images?.[0] ||
+                              "https://via.placeholder.com/150",
+                          }}
+                          className="w-full h-32 bg-gray-50"
+                          resizeMode="contain"
+                        />
+                        <View className="p-2">
+                          <Text
+                            className="text-[11px] font-medium text-gray-800"
+                            numberOfLines={1}
+                          >
+                            {product.title}
+                          </Text>
+                          <Text className="text-sm font-bold text-[#0a1128] mt-1">
+                            ₦{displayPrice.toLocaleString()}
+                          </Text>
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })
                 ) : (
                   <View className="w-full items-center mt-20">
                     <Text className="text-gray-400 text-xs">

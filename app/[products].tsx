@@ -1,8 +1,11 @@
+import { productService } from "@/services/productService";
+import { useProductStore } from "@/store/useProductStore";
 import { AntDesign, Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  FlatList,
   Image,
   ScrollView,
   Text,
@@ -12,14 +15,15 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const ProductDetails = () => {
-  // CRITICAL FIX: Since your file is [products].tsx,
-  // you must use 'products' as the variable name here.
-  const { products } = useLocalSearchParams();
+  const { products: slug } = useLocalSearchParams();
   const router = useRouter();
+
+  const { productsBySubCategory, fetchProductsBySubCategory } =
+    useProductStore();
 
   const [product, setProduct] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [, setError] = useState(false);
+  const [error, setError] = useState(false);
   const [selectedColor, setSelectedColor] = useState(0);
   const [mainImage, setMainImage] = useState<string>("");
 
@@ -27,72 +31,28 @@ const ProductDetails = () => {
     const fetchProduct = async () => {
       try {
         setLoading(true);
+        setError(false);
+        if (slug) {
+          const data = await productService.getProductBySlug(slug as string);
+          setProduct(data);
+          if (data.images && data.images.length > 0) {
+            setMainImage(data.images[0]);
+          }
 
-        // Simulating the database based on the dynamic route parameter
-        setTimeout(() => {
-          const productDatabase: any = {
-            "iphone-12": {
-              name: "Apple iPhone 12 Pro",
-              price: "400,000",
-              oldPrice: "600,000",
-              rating: 4.9,
-              reviewCount: 29,
-              description:
-                "Apple iPhone 12 Pro, 128GB, Silver - Fully Unlocked. Includes Pro camera system and 5G capabilities.",
-              tags: ["Electronics", "Phones", "Apple"],
-              colors: ["#2e3b4e", "#000000", "#e1e1e1"],
-              images: [
-                "https://images.unsplash.com/photo-1603302576837-37561b2e2302?q=80&w=500",
-                "https://images.unsplash.com/photo-1510557880182-3d4d3cba3f21?q=80&w=500",
-              ],
-              seller: {
-                name: "TandTdeals",
-                response: "<1 hour",
-                rating: "5.0",
-                totalProducts: "Over 100,000",
-              },
-            },
-            "tray-table": {
-              name: "Tray Table",
-              price: "400,128",
-              oldPrice: "480,128",
-              rating: 4.9,
-              reviewCount: 11,
-              description:
-                "Buy one or buy a few and make every space where you sit more convenient. Light and easy to move around with removable tray top, handy for serving snacks.",
-              tags: ["Household items", "Furniture", "woodwork"],
-              colors: ["#1e293b", "#000000", "#f97316", "#ff0000"],
-              images: [
-                "https://images.unsplash.com/photo-1533090161767-e6ffed986c88?q=80&w=500",
-                "https://images.unsplash.com/photo-1505691938895-1758d7eaa511?q=80&w=500",
-              ],
-              seller: {
-                name: "TandTdeals",
-                response: "<1 hour",
-                rating: "5.0",
-                totalProducts: "Over 100,000",
-              },
-            },
-          };
-
-          // Match the URL parameter 'products' against our database keys
-          const selectedProduct =
-            productDatabase[products as string] ||
-            productDatabase["tray-table"];
-
-          setProduct(selectedProduct);
-          setMainImage(selectedProduct.images[0]);
-          setLoading(false);
-        }, 800);
+          if (data.category?.slug || data.category) {
+            const catSlug = data.category?.slug || data.category;
+            fetchProductsBySubCategory({ subCategory: catSlug });
+          }
+        }
       } catch (err) {
         setError(true);
+      } finally {
         setLoading(false);
-        console.log(err);
       }
     };
 
     fetchProduct();
-  }, [products]); // Re-run if the URL parameter changes
+  }, [slug]);
 
   if (loading)
     return (
@@ -101,26 +61,47 @@ const ProductDetails = () => {
       </View>
     );
 
+  if (error || !product)
+    return (
+      <View className="flex-1 justify-center items-center bg-white p-4">
+        <Text className="text-gray-500 mb-4">Product not found</Text>
+        <TouchableOpacity
+          className="bg-[#a3cc39] px-6 py-2 rounded-lg"
+          onPress={() => router.back()}
+        >
+          <Text className="text-white font-bold">Go Back</Text>
+        </TouchableOpacity>
+      </View>
+    );
+
+  // Main Product Price Logic
+  const displayPrice =
+    product.salePrice > 0 ? product.salePrice : product.price;
+  const hasDiscount =
+    product.salePrice > 0 && product.salePrice < product.price;
+
+  // Filter related products (exclude current)
+  const categoryKey = product.category?.slug || product.category;
+  const relatedProducts = (productsBySubCategory[categoryKey] || [])
+    .filter((p: any) => p.slug !== slug)
+    .slice(0, 10);
+
   return (
     <SafeAreaView className="flex-1 bg-white" edges={["top"]}>
-      {/* Header Navigation */}
       <View className="flex-row justify-between items-center px-4 py-3 border-b border-gray-100">
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          className="flex gap-2 flex-row items-center"
+        >
           <AntDesign name="arrow-left" size={24} color="black" />
-        </TouchableOpacity>
-        <Text className="text-[10px] text-gray-400">
-          Home {">"} Product {">"} Living Room {">"} {product.name}
-        </Text>
-        <TouchableOpacity>
-          <Ionicons name="share-outline" size={24} color="black" />
+          <Text className="text-[10px] text-gray-400">Back</Text>
         </TouchableOpacity>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Gallery Section */}
         <View className="flex-row bg-[#F8F8F8] p-4">
           <View className="gap-2 mr-4">
-            {product.images.map((img: string, i: number) => (
+            {product.images?.map((img: string, i: number) => (
               <TouchableOpacity
                 key={i}
                 onPress={() => setMainImage(img)}
@@ -137,7 +118,7 @@ const ProductDetails = () => {
           <View className="flex-1 relative">
             <View className="absolute top-0 right-0 z-10 bg-[#a3cc39] px-2 py-1 rounded">
               <Text className="text-white text-[10px] font-bold uppercase">
-                Used
+                {product.condition || "New"}
               </Text>
             </View>
             <Image
@@ -148,45 +129,55 @@ const ProductDetails = () => {
           </View>
         </View>
 
-        {/* Product Details Section */}
         <View className="p-4">
           <Text className="text-xl font-bold text-gray-800">
-            {product.name}
+            {product.title}
           </Text>
           <Text className="text-gray-500 text-xs mt-2 leading-5">
             {product.description}
           </Text>
 
           <View className="flex-row items-center mt-4 gap-2">
-            <Text className="text-xl font-bold">₦{product.price}</Text>
-            <Text className="text-gray-400 line-through text-sm">
-              ₦{product.oldPrice}
+            <Text className="text-xl font-bold">
+              ₦{displayPrice?.toLocaleString()}
             </Text>
+            {hasDiscount && (
+              <Text className="text-gray-400 line-through text-sm">
+                ₦{product.price?.toLocaleString()}
+              </Text>
+            )}
           </View>
 
           <View className="flex-row items-center mt-2">
             {[1, 2, 3, 4, 5].map((s) => (
-              <AntDesign key={s} name="star" size={14} color="#a3cc39" />
+              <AntDesign
+                key={s}
+                name="star"
+                size={14}
+                color={s <= (product.totalrating || 5) ? "#a3cc39" : "#D1D5DB"}
+              />
             ))}
             <Text className="text-gray-500 text-xs ml-2">
-              {product.reviewCount} Reviews
+              {product.ratings?.length || 0} Reviews
             </Text>
           </View>
 
-          {/* Color Selector */}
-          <Text className="font-bold mt-6 mb-3">Color</Text>
-          <View className="flex-row gap-3">
-            {product.colors.map((color: string, index: number) => (
-              <TouchableOpacity
-                key={index}
-                onPress={() => setSelectedColor(index)}
-                style={{ backgroundColor: color }}
-                className={`w-10 h-10 rounded-full ${selectedColor === index ? "border-4 border-gray-200" : ""}`}
-              />
-            ))}
-          </View>
+          {product.colors && product.colors.length > 0 && (
+            <>
+              <Text className="font-bold mt-6 mb-3">Color</Text>
+              <View className="flex-row gap-3">
+                {product.colors.map((color: string, index: number) => (
+                  <TouchableOpacity
+                    key={index}
+                    onPress={() => setSelectedColor(index)}
+                    style={{ backgroundColor: color }}
+                    className={`w-10 h-10 rounded-full ${selectedColor === index ? "border-4 border-gray-200" : ""}`}
+                  />
+                ))}
+              </View>
+            </>
+          )}
 
-          {/* Action Buttons */}
           <View className="flex-row items-center mt-8 gap-3">
             <TouchableOpacity className="border border-gray-200 p-3 rounded-lg">
               <Ionicons name="swap-horizontal" size={24} color="#666" />
@@ -202,11 +193,10 @@ const ProductDetails = () => {
 
           <Text className="text-gray-400 text-xs mt-6">
             <Text className="font-bold text-gray-600">Tags: </Text>
-            {product.tags.join(", ")}
+            {Array.isArray(product.tags) ? product.tags.join(", ") : "General"}
           </Text>
         </View>
 
-        {/* Tab Selection Section (Details / Reviews) */}
         <View className="flex-row border-b border-gray-100 px-4 mt-4">
           <TouchableOpacity className="border-b-2 border-black pb-2 mr-6">
             <Text className="font-bold">Details</Text>
@@ -216,31 +206,26 @@ const ProductDetails = () => {
           </TouchableOpacity>
         </View>
 
-        {/* Product Specifications Section */}
         <View className="p-4">
           <Text className="font-bold text-lg mb-4">Product Specifications</Text>
           <View className="gap-y-2">
             <Text className="text-gray-500 text-xs">
-              <Text className="font-bold text-gray-700">Features: </Text>Premium
-              build quality...
+              <Text className="font-bold text-gray-700">Brand: </Text>
+              {product.brand || "Generic"}
             </Text>
             <Text className="text-gray-500 text-xs">
-              <Text className="font-bold text-gray-700">Material: </Text>Wood
-              type, Metal, Fabric, etc.
+              <Text className="font-bold text-gray-700">Category: </Text>
+              {product.category?.title || "Electronics"}
             </Text>
             <Text className="text-gray-500 text-xs">
               <Text className="font-bold text-gray-700">
-                Assembly Required:{" "}
+                Stock Availability:{" "}
               </Text>
-              Yes
-            </Text>
-            <Text className="text-gray-500 text-xs">
-              <Text className="font-bold text-gray-700">Style: </Text>Modern
+              {product.quantity > 0 ? "In Stock" : "Out of Stock"}
             </Text>
           </View>
         </View>
 
-        {/* Delivery Options Section */}
         <View className="bg-[#0A1128] mx-4 p-4 rounded-t-xl flex-row items-center mt-4">
           <MaterialIcons name="local-shipping" size={20} color="#a3cc39" />
           <Text className="text-white font-bold ml-2">Delivery Options</Text>
@@ -264,36 +249,84 @@ const ProductDetails = () => {
             <Text className="text-[10px] text-gray-400">
               • Signature required for delivery
             </Text>
-            <Text className="text-[10px] text-gray-400">
-              • Safe and secure packaging
-            </Text>
           </View>
         </View>
 
-        {/* Seller Info Section */}
-        <View className="mx-4 bg-white border border-gray-100 p-4 rounded-xl mb-6">
+        <View className="mx-4 bg-white border border-gray-100 p-4 rounded-xl mb-10">
           <Text className="font-bold text-gray-800 mb-4">
             Seller Information
           </Text>
           <View className="flex-row justify-between items-center">
-            <Text className="font-bold text-lg">{product.seller.name}</Text>
+            <Text className="font-bold text-lg">
+              {product.vendor?.businessName ||
+                product.vendor?.fullname ||
+                "Verified Seller"}
+            </Text>
             <AntDesign name="check-circle" size={18} color="#a3cc39" />
           </View>
           <View className="flex-row justify-between mt-4">
             <View>
-              <Text className="text-gray-400 text-[10px]">Response time:</Text>
+              <Text className="text-gray-400 text-[10px]">Vendor Contact:</Text>
               <Text className="font-bold text-xs">
-                {product.seller.response}
+                {product.vendor?.phone || "N/A"}
               </Text>
             </View>
             <View>
-              <Text className="text-gray-400 text-[10px]">Total Products:</Text>
+              <Text className="text-gray-400 text-[10px]">Email:</Text>
               <Text className="font-bold text-xs">
-                {product.seller.totalProducts}
+                {product.vendor?.email || "N/A"}
               </Text>
             </View>
           </View>
         </View>
+
+        {/* Updated "You might also like" Section */}
+        {relatedProducts.length > 0 && (
+          <View className="mb-10">
+            <Text className="font-bold text-lg px-4 mb-4">
+              You might also like
+            </Text>
+            <FlatList
+              data={relatedProducts}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              keyExtractor={(item) => item.id || item._id}
+              contentContainerStyle={{ paddingHorizontal: 16 }}
+              renderItem={({ item }) => {
+                // Apply the same price fallback logic here
+                const itemPrice =
+                  item.salePrice > 0 ? item.salePrice : item.price;
+
+                return (
+                  <TouchableOpacity
+                    onPress={() => router.push(`/${item.slug}`)}
+                    className="mr-4 w-40 bg-white border border-gray-100 rounded-xl overflow-hidden shadow-sm"
+                  >
+                    <Image
+                      source={{ uri: item.images?.[0] }}
+                      className="w-full h-32 bg-gray-50"
+                      resizeMode="contain"
+                    />
+                    <View className="p-2">
+                      <Text
+                        className="text-[11px] font-medium text-gray-800"
+                        numberOfLines={1}
+                      >
+                        {item.title}
+                      </Text>
+                      <Text className="text-sm font-bold text-[#0A1128] mt-1">
+                        {/* Only show price if it's actually greater than 0 */}
+                        {itemPrice > 0
+                          ? `₦${itemPrice.toLocaleString()}`
+                          : "Contact for Price"}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              }}
+            />
+          </View>
+        )}
 
         <View className="h-20" />
       </ScrollView>

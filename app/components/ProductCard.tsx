@@ -1,98 +1,80 @@
-import { AntDesign, Feather } from "@expo/vector-icons";
+import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React from "react";
 import { Image, Text, TouchableOpacity, View } from "react-native";
 
-export interface Product {
-  id: string;
-  name: string;
-  price: string;
-  oldPrice?: string;
-  image: string;
-  rating: number;
-  reviews: number;
-  store: string;
-}
-
-const ProductCard = ({ product }: { product: Product }) => {
+const ProductCard = ({ product }: { product: any }) => {
   const router = useRouter();
 
+  // The Service ensures these fields exist via normalization
+  const displayPrice = product.salePrice || product.price || 0;
+  const originalPrice = product.price || 0;
+  const imageUri = product.images?.[0] || "https://via.placeholder.com/150";
+
   const handlePress = () => {
+    // Navigate using the slug to match your [products].tsx dynamic route
     router.push({
       pathname: "/[products]",
-      params: { products: product.id },
+      params: { products: product.slug },
     });
   };
 
   return (
     <TouchableOpacity
       onPress={handlePress}
-      activeOpacity={0.9}
-      className="bg-white border border-gray-100 rounded-2xl p-3 w-48 mr-4 shadow-sm"
+      activeOpacity={0.8}
+      // Added mb-1 to prevent shadow clipping at the bottom of the list
+      className="bg-white border border-gray-100 rounded-2xl p-3 w-44 shadow-sm mb-1"
     >
-      {/* Wishlist Heart */}
-      <TouchableOpacity
-        onPress={(e) => e.stopPropagation()} // Prevents navigation when clicking heart
-        className="absolute right-3 top-3 z-10"
-      >
-        <AntDesign name="heart" size={18} color="#9ca3af" />
-      </TouchableOpacity>
-
-      {/* Product Image */}
-      <Image
-        source={{ uri: product.image }}
-        className="w-full h-32"
-        resizeMode="contain"
-      />
+      {/* Image Container */}
+      <View className="items-center justify-center bg-gray-50 rounded-xl overflow-hidden">
+        <Image
+          source={{ uri: imageUri }}
+          className="w-full h-32"
+          resizeMode="contain" // Switched to contain to ensure full product is visible
+          onError={(e) =>
+            console.log(
+              `Image Load Error for ${product.title}:`,
+              e.nativeEvent.error,
+            )
+          }
+        />
+      </View>
 
       {/* Product Info */}
       <View className="mt-3">
         <Text
           numberOfLines={2}
-          className="text-[12px] font-medium text-gray-800 leading-4"
+          className="text-[12px] font-semibold text-gray-800 h-8 leading-4"
         >
-          {product.name}
+          {product.title}
         </Text>
 
-        {/* Price Row */}
         <View className="flex-row items-center mt-2 gap-2">
-          <Text className="text-sm font-bold text-gray-900">
-            ₦{product.price}
+          <Text className="text-[14px] font-bold text-[#0a1128]">
+            ₦{displayPrice.toLocaleString()}
           </Text>
-          {product.oldPrice && (
+          {originalPrice > displayPrice && (
             <Text className="text-[10px] text-gray-400 line-through">
-              ₦{product.oldPrice}
+              ₦{originalPrice.toLocaleString()}
             </Text>
           )}
         </View>
-
-        {/* Rating & Store */}
-        <View className="flex-row items-center mt-1 gap-1">
-          <View className="flex-row">
-            {[1, 2, 3, 4, 5].map((s) => (
-              <AntDesign
-                key={s}
-                name="star"
-                size={10}
-                color={s <= product.rating ? "#a3cc39" : "#e5e7eb"}
-              />
-            ))}
-          </View>
-          <Text className="text-[10px] text-gray-400">({product.reviews})</Text>
-        </View>
-
-        <Text className="text-[9px] text-gray-400 mt-1">
-          Sold by: {product.store}
-        </Text>
       </View>
 
       {/* Add to Cart Button */}
       <TouchableOpacity
-        onPress={(e) => e.stopPropagation()} // Prevents navigation when adding to cart
-        className="bg-[#a3cc39] flex-row items-center justify-center py-2 rounded-lg mt-3 gap-2"
+        className="bg-[#a3cc39] flex-row items-center justify-center py-2.5 rounded-lg mt-3"
+        onPress={(e) => {
+          e.stopPropagation(); // Prevents navigating to details when clicking button
+          console.log("Added to cart:", product.title);
+          // Add your cart store logic here later
+        }}
       >
-        <Text className="text-white text-[11px] font-bold">Add to cart</Text>
         <Feather name="shopping-cart" size={14} color="white" />
+        <Text className="text-white text-[11px] font-bold ml-2">
+          Add to Cart
+        </Text>
       </TouchableOpacity>
     </TouchableOpacity>
   );
